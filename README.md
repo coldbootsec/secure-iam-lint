@@ -14,6 +14,18 @@ This tool is built for DevSecOps workflows. It works great in CI pipelines, loca
 - CLI output designed to be readable and useful
 - Fully testable, modular Python structure
 
+
+## How It Fits Into CI/CD
+
+```mermaid
+graph TD
+    A[Developer pushes code] --> B[CI pipeline starts]
+    B --> C[Run secure-iam-lint on IAM policies]
+    C --> D{Any findings?}
+    D -- Yes --> E[Fail build and report]
+    D -- No --> F[Proceed to deploy]
+```
+
 ## Installation
 
 Clone the repo and install it in editable mode (use a virtual environment):
