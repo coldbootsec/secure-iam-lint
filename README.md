@@ -1,94 +1,101 @@
-![CI](https://github.com/coldbootsec/secure-iam-lint/actions/workflows/test.yml/badge.svg)
 # secure-iam-lint
 
-`secure-iam-lint` is a lightweight CLI tool that scans AWS IAM policy files for common misconfigurations. It flags overly permissive actions like wildcards, missing conditions, and patterns that could lead to privilege escalation.
+**Scan your IAM policies before they hit prod.**  
+`secure-iam-lint` catches common misconfigurations in AWS IAM policies with a simple CLI or CI step.
 
-This tool is built for DevSecOps workflows. It works great in CI pipelines, local dev environments, and anywhere you want to catch risky IAM practices early.
+## Why
 
-## Features
+Overly permissive IAM policies are one of the most common and dangerous misconfigurations in AWS environments. This tool helps identify risky patterns before they're deployed, keeping your infrastructure secure by default.
 
-- Flags use of `Action: "*"` and `Resource: "*"`
-- Warns on `Allow` statements missing `Condition` blocks
-- Detects use of `iam:PassRole` with wildcard resources
-- Identifies `NotAction` and `NotResource` usage
-- CLI output designed to be readable and useful
-- Fully testable, modular Python structure
-
-
-## How It Fits Into CI/CD
+## How It Works
 
 ```mermaid
 graph TD
-    A[Developer pushes code] --> B[CI pipeline starts]
-    B --> C[Run secure-iam-lint on IAM policies]
-    C --> D{Any findings?}
-    D -- Yes --> E[Fail build and report]
-    D -- No --> F[Proceed to deploy]
+    A[Developer writes IAM policy] --> B[Run secure-iam-lint]
+    B --> C{Policy safe?}
+    C -- Yes --> D[Deploy to AWS]
+    C -- No --> E[Fail pipeline or warn developer]
 ```
 
-## Installation
+## Install
 
-Clone the repo and install it in editable mode (use a virtual environment):
+For now:
 
 ```bash
-git clone https://github.com/yourusername/secure-iam-lint.git
+git clone https://github.com/coldbootsec/secure-iam-lint.git
 cd secure-iam-lint
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+python3 -m venv .venv && source .venv/bin/activate
+pip install .
+```
+
+Coming soon:
+
+```bash
+pip install secure-iam-lint  # coming soon
 ```
 
 ## Usage
 
 ```bash
-iam-lint examples/bad-policy-extended.json
+iam-lint examples/bad-policy.json
 ```
 
-Example output:
+## Example Output
 
 ```
-Findings:
- - HIGH Statement 0: Action includes '*' (overly permissive)
- - HIGH Statement 0: Resource includes '*' (overly permissive)
- - MEDIUM Statement 1: Allow without any Condition block
- - CRITICAL Statement 2: iam:PassRole with wildcard resource
- - MEDIUM Statement 3: uses NotAction (may be overly permissive)
- - MEDIUM Statement 3: uses NotResource (may be overly permissive)
+[!] Findings:
+ - Statement 0: Action includes '*' (overly permissive)
+ - Statement 0: Resource includes '*' (overly permissive)
+ - Statement 0: Allow without any Condition block
+ - Statement 1: Allow without any Condition block
+ - Statement 1: Uses sts:AssumeRole with wildcard
+ - Statement 1: Grants iam:PassRole without Conditions
 ```
 
-Use `--verbose` if you want extra detail during scans.
+## Current Rules
 
-## Running Tests
+| Rule                             | Description                                  |
+|----------------------------------|----------------------------------------------|
+| `*` in Action or Resource        | Detects wildcard permissions                 |
+| Allow without Condition          | Warns on unconditional access                |
+| Privilege Escalation Patterns    | Detects dangerous combinations (e.g. PassRole + wildcard) |
+| sts:AssumeRole with Wildcard     | Flags open trust policies                    |
 
-Install `pytest` and run the suite:
+## CI Integration
 
-```bash
-pip install pytest
-pytest tests/
+```yaml
+- name: Lint IAM policies
+  run: |
+    pip install .
+    iam-lint path/to/policies/
 ```
+
+## Examples
+
+See [`examples/bad-policy.json`](examples/bad-policy.json) and [`examples/escalation-risk.json`](examples/escalation-risk.json) for policy samples that trigger linter warnings.
 
 ## Project Structure
 
-```
+```text
 secure-iam-lint/
-├── iamlint/               # CLI and rule logic
-├── examples/              # Sample IAM policies to test
-├── tests/                 # Pytest-based test suite
-├── iam_lint.py            # CLI entry point
-├── setup.py               # Install/config metadata
+├── iamlint/
+│   ├── __init__.py
+│   ├── cli.py
+│   └── rules.py
+├── examples/
+│   ├── bad-policy.json
+│   └── escalation-risk.json
+├── tests/
+│   └── test_rules.py
+├── iam_lint.py
+├── setup.py
 └── README.md
 ```
 
-## Roadmap
+## Contributing
 
-Coming soon:
+Issues and pull requests are welcome. Open a discussion if you have an idea for a new rule.
 
-- JSON and SARIF output modes
-- Fail thresholds (e.g. `--fail-on HIGH`)
-- Docker support for CI use
-- Configurable rule sets
+## License
 
-## Why This Exists
-
-IAM policy reviews are tedious and easy to get wrong. This tool helps you catch obvious problems early — especially useful for engineers reviewing IaC templates or pushing changes in regulated environments.
-
+MIT
